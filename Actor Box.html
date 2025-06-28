@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>테크니컬 배우 훈련</title>
+  <style>
+    body {
+      font-family: 'Apple SD Gothic Neo', sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 10px;
+      text-align: center;
+      background: #f0f2f5;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    input[type="text"] {
+      width: 150px;
+      padding: 8px;
+      margin: 5px 0 10px 0;
+      font-size: 1rem;
+    }
+    button {
+      padding: 8px 16px;
+      margin: 5px 5px 5px 0;
+      font-size: 1rem;
+      background-color: #0052cc;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    button:hover:not(:disabled) {
+      background-color: #003d99;
+    }
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+
+    .word-list {
+      margin-top: 5px;
+      min-height: 28px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .word-item {
+      margin: 3px 6px;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+    .word-item span {
+      margin-right: 6px;
+    }
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .left-color { background-color: #d9534f; color: white; }
+    .center-color { background-color: #0275d8; color: white; }
+    .right-color { background-color: #222; color: white; }
+
+    .roulette-display {
+      font-size: 2.4rem;
+      margin: 25px 0;
+      min-height: 90px;
+      font-weight: 700;
+      color: #333;
+      line-height: 1.2;
+    }
+    .roulette-line { margin: 4px 0; }
+
+    .result-list {
+      margin-top: 25px;
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 0 7px rgba(0,0,0,0.1);
+    }
+    .result-item {
+      padding: 6px 0;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .result-text {
+      font-size: 0.95rem;
+    }
+    .result-time {
+      color: #777;
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+    .result-delete {
+      background: transparent;
+      border: none;
+      color: #c00;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+<h1>테크니컬 배우 훈련</h1>
+
+<!-- 단어 입력 -->
+<div>
+  <label for="leftInput">화술 박스</label>
+  <input id="leftInput" type="text" placeholder="화술 단어 입력" />
+  <button onclick="addWord('left')">추가</button>
+  <div id="leftList" class="word-list"></div>
+</div>
+
+<div>
+  <label for="centerInput">신체 박스</label>
+  <input id="centerInput" type="text" placeholder="신체 단어 입력" />
+  <button onclick="addWord('center')">추가</button>
+  <div id="centerList" class="word-list"></div>
+</div>
+
+<div>
+  <label for="rightInput">특징 박스</label>
+  <input id="rightInput" type="text" placeholder="특징 단어 입력" />
+  <button onclick="addWord('right')">추가</button>
+  <div id="rightList" class="word-list"></div>
+</div>
+
+<!-- 룰렛 표시 -->
+<div class="roulette-display">
+  <div class="roulette-line" id="line1">-</div>
+  <div class="roulette-line" id="line2">-</div>
+  <div class="roulette-line" id="line3">-</div>
+</div>
+
+<button id="spinBtn" onclick="spinRoulette()" disabled>🎲 돌리기</button>
+
+<!-- 결과 목록 -->
+<h3>완성된 캐릭터</h3>
+<div class="result-list" id="resultList">
+  <p>아직 결과가 없습니다.</p>
+</div>
+
+<!-- 효과음 -->
+<audio id="clickSound" src="https://actions.google.com/sounds/v1/ui/click.ogg" preload="auto"></audio>
+<audio id="doneSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+<audio id="spinSound" src="https://actions.google.com/sounds/v1/ambiences/game_show_theme.ogg" preload="auto"></audio>
+
+<script>
+  const leftWords = [], centerWords = [], rightWords = [];
+
+  const line1 = document.getElementById('line1');
+  const line2 = document.getElementById('line2');
+  const line3 = document.getElementById('line3');
+  const spinBtn = document.getElementById('spinBtn');
+  const resultList = document.getElementById('resultList');
+  const clickSound = document.getElementById('clickSound');
+  const doneSound = document.getElementById('doneSound');
+  const spinSound = document.getElementById('spinSound');
+
+  function getTimeString() {
+    const now = new Date();
+    return now.toLocaleString('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  function saveResult(text) {
+    const results = loadResults();
+    results.push({ text, time: getTimeString() });
+    localStorage.setItem('rouletteResults', JSON.stringify(results));
+    updateResultList();
+  }
+
+  function deleteResult(index) {
+    const results = loadResults();
+    results.splice(index, 1);
+    localStorage.setItem('rouletteResults', JSON.stringify(results));
+    updateResultList();
+  }
+
+  function loadResults() {
+    const saved = localStorage.getItem('rouletteResults');
+    return saved ? JSON.parse(saved) : [];
+  }
+
+  function updateResultList() {
+    const results = loadResults();
+    resultList.innerHTML = '';
+    if (results.length === 0) {
+      resultList.innerHTML = '<p>아직 결과가 없습니다.</p>';
+      return;
+    }
+    results.slice().reverse().forEach((r, i) => {
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      div.innerHTML = `
+        <div>
+          <div class="result-text">${r.text}</div>
+          <div class="result-time">${r.time}</div>
+        </div>
+        <button class="result-delete" onclick="deleteResult(${results.length - 1 - i})">×</button>
+      `;
+      resultList.appendChild(div);
+    });
+  }
+
+  function addWord(position) {
+    let input, arr;
+    if (position === 'left') {
+      input = document.getElementById('leftInput');
+      arr = leftWords;
+    } else if (position === 'center') {
+      input = document.getElementById('centerInput');
+      arr = centerWords;
+    } else {
+      input = document.getElementById('rightInput');
+      arr = rightWords;
+    }
+
+    const val = input.value.trim();
+    if (!val) return;
+    arr.push(val);
+    saveWords();
+    updateWordLists();
+    input.value = '';
+    checkSpinEnable();
+    clickSound.play();
+  }
+
+  function saveWords() {
+    localStorage.setItem('leftWords', JSON.stringify(leftWords));
+    localStorage.setItem('centerWords', JSON.stringify(centerWords));
+    localStorage.setItem('rightWords', JSON.stringify(rightWords));
+  }
+
+  function loadWords() {
+    const lw = localStorage.getItem('leftWords');
+    const cw = localStorage.getItem('centerWords');
+    const rw = localStorage.getItem('rightWords');
+    if (lw) leftWords.push(...JSON.parse(lw));
+    if (cw) centerWords.push(...JSON.parse(cw));
+    if (rw) rightWords.push(...JSON.parse(rw));
+  }
+
+  function updateWordLists() {
+    renderList(leftWords, document.getElementById('leftList'), 'left-color', 'left');
+    renderList(centerWords, document.getElementById('centerList'), 'center-color', 'center');
+    renderList(rightWords, document.getElementById('rightList'), 'right-color', 'right');
+  }
+
+  function renderList(arr, container, colorClass, position) {
+    container.innerHTML = '';
+    arr.forEach((word, i) => {
+      const span = document.createElement('span');
+      span.className = `word-item ${colorClass}`;
+      span.innerHTML = `<span>${word}</span><button class="delete-btn" onclick="deleteWord('${position}', ${i})">×</button>`;
+      container.appendChild(span);
+    });
+  }
+
+  function deleteWord(position, index) {
+    if (position === 'left') leftWords.splice(index, 1);
+    else if (position === 'center') centerWords.splice(index, 1);
+    else rightWords.splice(index, 1);
+    saveWords();
+    updateWordLists();
+    checkSpinEnable();
+  }
+
+  function checkSpinEnable() {
+    spinBtn.disabled = !(leftWords.length && centerWords.length && rightWords.length);
+  }
+
+  function spinRoulette() {
+    spinBtn.disabled = true;
+    clickSound.play();
+    spinSound.play();
+
+    let spinCount = 30;
+    let delay = 40;
+
+    function spinStep() {
+      const leftPick = leftWords[Math.floor(Math.random() * leftWords.length)];
+      const centerPick = centerWords[Math.floor(Math.random() * centerWords.length)];
+      const rightPick = rightWords[Math.floor(Math.random() * rightWords.length)];
+
+      line1.textContent = leftPick;
+      line2.textContent = centerPick;
+      line3.textContent = rightPick;
+
+      if (--spinCount > 0) {
+        delay += 10;
+        setTimeout(spinStep, delay);
+      } else {
+        spinSound.pause();
+        spinSound.currentTime = 0;
+        doneSound.play();
+        const result = `${leftPick} | ${centerPick} | ${rightPick}`;
+        saveResult(result);
+        spinBtn.disabled = false;
+      }
+    }
+
+    spinStep();
+  }
+
+  window.onload = () => {
+    loadWords();
+    updateWordLists();
+    updateResultList();
+    checkSpinEnable();
+  };
+</script>
+</body>
+</html>
